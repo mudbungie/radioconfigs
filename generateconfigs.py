@@ -2,14 +2,15 @@
 
 import os
 
+path = os.path.dirname(os.path.abspath(__file__))
+
 # Get rid of weird trailing characters, and remove numbers
 def ssidstrip(ssid):
-    return ''.join([c for c in ssid.rstrip().rstrip('N').\
-        rstrip('NYK') if not c.isdigit()])
+    return ssid.rstrip().rstrip('N').rstrip('NYK').rstrip('0123456789')
 
 # Get the universal configuration options, compile into list
 universaldirectives = []
-with open('/root/radioconfigurator/universalconfig.conf') as universalconfig:
+with open(path + '/universalconfig.conf') as universalconfig:
     for line in universalconfig.readlines():
         universaldirectives.append(line.split('=')[0])
 
@@ -19,6 +20,11 @@ with open('/root/csvs/current_aps.csv') as apfile:
     for line in apfile:
         line = line.split(',')
         ssid = ssidstrip(line[3])
+        # This is a hack, but we have weird equipment.
+        if ssid == 'GBS' or ssid == 'GREYCBB':
+            ssid = 'GB'
+        if ssid == 'CPOWELL':
+            ssid = 'PB'
         #ssids.add(ssidlisting)
         channel = line[6]
         try:
@@ -26,11 +32,11 @@ with open('/root/csvs/current_aps.csv') as apfile:
         except KeyError:
             ssids[ssid] = set()
             ssids[ssid].add(channel)
-        print(ssid, len(ssids[ssid]))
+        #print(ssid, len(ssids[ssid]))
 
-towers = [tower.replace('.cfg', '') for tower in os.listdir('/root/radioconfigurator/configs')]
-path = '/root/radioconfigurator/configs/'
-newpath = '/root/radioconfigurator/newconfigs/'
+towers = [tower.replace('.cfg', '') for tower in os.listdir(path + '/configs')]
+oldpath = path + '/configs/'
+newpath = path + '/newconfigs/'
 
 for tower in towers:
     print('Generating configuration for ' + tower)
@@ -68,7 +74,7 @@ for tower in towers:
     m510.write('wireless.1.scan_list.channels=' + channels + '\n')
     m520.write('wireless.1.scan_list.channels=' + channels + '\n')
     # Copy the the configuration from each of the files into each of the new configs.
-    with open(path + tower + '.cfg') as baseConfig:
+    with open(oldpath + tower + '.cfg') as baseConfig:
         for line in baseConfig.readlines():
             line = line.rstrip()
             directive = line.split('=')[0]
